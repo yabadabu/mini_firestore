@@ -94,8 +94,7 @@ void testDelete(MiniFireStore::Firestore& db) {
     while( !db.hasFinished() ) db.update();
 }
 
-void testReadWriteDelete(MiniFireStore::Firestore& db) {
-
+School initSchool() {
     // Create a local obj, including 
     School school;
     school.age = 150;
@@ -107,6 +106,12 @@ void testReadWriteDelete(MiniFireStore::Firestore& db) {
     school.population.emplace_back( 20, "John");
     school.population.emplace_back( 19, "Peter");
     school.population.emplace_back( 15, "Alex");
+    return school;
+}
+
+void testReadWriteDelete(MiniFireStore::Firestore& db) {
+
+    School school = initSchool();
     
     Ref r = db.ref( "free" );
     printf( "testReadWriteDelete begins...\n");
@@ -309,6 +314,31 @@ void testQuery(MiniFireStore::Firestore& db) {
     while( !db.hasFinished() ) db.update();
 }
 
+void testInc(MiniFireStore::Firestore& db) {
+    Ref ref = db.ref( "users" ).child( db.uid() );
+
+    School p = initSchool();
+    int delta = 5;
+    ref.write( p, [=]( Result& r ) {
+        printf( "Wrote school! >%s<\n", r.str.c_str());
+        // Increment a field of a suboject in the same doc
+        ref.inc( "director.age", delta, [=](Result& r) {
+            printf( "Incremented by %d! >%s<\n", delta, r.str.c_str());
+            ref.read( [=]( Result& r ) {
+                printf( "read back!\n");
+                assert( !r.err );
+                School np;
+                if( r.get(np) ) {
+                    printf( "Check %d+%d == %d\n", p.director.age, delta, np.director.age );
+                    assert( p.director.age + delta == np.director.age );
+                }
+            });
+        });
+    });
+
+    while( !db.hasFinished() ) db.update();
+}
+
 class MySample {
 public:
     void myLog( MiniFireStore::eLevel level, const char* msg ) {
@@ -331,7 +361,7 @@ int main(int argc, char** argv)
             printf("Login failed: %s\n", result.j.dump().c_str());
             return;
         }
-
+        testInc(db);
         testSubCollections(db);
         testDelete(db);
         testReadWriteDelete(db);

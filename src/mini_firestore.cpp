@@ -224,6 +224,9 @@ namespace MiniFireStore
                 // If we are inside a callback waiting to fs to finish, this request is no longer on the fly
                 on_the_fly_request.erase( it );
 
+                // Move the recv str to the result object
+                r->result.str = std::move( r->str_recv );
+
                 r->callback( r->result );
 
                 unregisterRequest( curl, r );
@@ -260,7 +263,7 @@ namespace MiniFireStore
         r->result = Result();
         r->url = url;
         r->str_recv.clear();
-        r->str_sent = jbody.dump();
+        r->str_sent = jbody.dump(2, ' ');
         r->send_offset = 0;
         r->label = label;
         r->flags = flags;
@@ -319,7 +322,7 @@ namespace MiniFireStore
 
         if( r->flags & RPC_FLAG_DELETE ) {
             if( r->flags & RPC_FLAG_TRACE )
-                log( eLevel::Trace, "Custom request delete\n");
+                log( eLevel::Log, "Custom request delete\n");
             curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
         }
 
@@ -332,14 +335,14 @@ namespace MiniFireStore
 #endif
 
         if( r->flags & RPC_FLAG_TRACE ) {
-            log( eLevel::Trace, "URL:%s\n", r->url.c_str() );
+            log( eLevel::Log, "URL:%s\n", r->url.c_str() );
             curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
         }
 
         if (!r->str_sent.empty()) {
             // Convert json to string
             if( r->flags & RPC_FLAG_TRACE )
-                log( eLevel::Trace, "BODY:%s\n", r->str_sent.c_str() );
+                log( eLevel::Log, "BODY:%s\n", r->str_sent.c_str() );
             curl_easy_setopt(curl, CURLOPT_READFUNCTION, &CurlReadFromRequest);
             curl_easy_setopt(curl, CURLOPT_READDATA, r);
             curl_easy_setopt(curl, CURLOPT_POST, 1L);
@@ -572,6 +575,29 @@ namespace MiniFireStore
             { "writes", {{"update", jDocument }} }
         };
         return db->allocRequest( ":commit", jCmd, cb, "write" );
+    }
+
+    uint32_t Ref::inc(const std::string& field_name, double value, Callback cb) const {
+        json jCmd = {
+            { "writes", {
+                {
+                    {"transform", 
+                        {
+                            {"document", db->doc_root + doc_id},
+                            {"fieldTransforms", {
+                                {
+                                    { "fieldPath", field_name },
+                                    { "increment", 
+                                        { {"doubleValue", value } }
+                                    }
+                                }
+                            }}
+                        }
+                    },
+                },
+            }}
+        };
+        return db->allocRequest( ":commit", jCmd, cb, "write", RPC_FLAG_TRACE );
     }
 
     // Helpers to convert a OrderBy/Condition to json
