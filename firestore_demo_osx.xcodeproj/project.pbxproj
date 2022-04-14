@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		52086CC22808961E00F0E183 /* demo_mini_firestore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 52086CC12808961E00F0E183 /* demo_mini_firestore.cpp */; };
 		526A28A62807471F0017A2C5 /* mini_firestore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 526A28A52807471F0017A2C5 /* mini_firestore.cpp */; };
-		526A28A8280747270017A2C5 /* MiniFirestoreDemo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 526A28A7280747270017A2C5 /* MiniFirestoreDemo.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -25,8 +25,9 @@
 
 /* Begin PBXFileReference section */
 		520267C9280746D1004D7AA7 /* firestore_demo */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = firestore_demo; sourceTree = BUILT_PRODUCTS_DIR; };
+		52086CC02808961E00F0E183 /* demo_credentials.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = demo_credentials.h; path = demo/demo_credentials.h; sourceTree = "<group>"; };
+		52086CC12808961E00F0E183 /* demo_mini_firestore.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = demo_mini_firestore.cpp; path = demo/demo_mini_firestore.cpp; sourceTree = "<group>"; };
 		526A28A52807471F0017A2C5 /* mini_firestore.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mini_firestore.cpp; path = src/mini_firestore.cpp; sourceTree = "<group>"; };
-		526A28A7280747270017A2C5 /* MiniFirestoreDemo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MiniFirestoreDemo.cpp; path = demo/MiniFirestoreDemo.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -43,7 +44,8 @@
 		520267C0280746D1004D7AA7 = {
 			isa = PBXGroup;
 			children = (
-				526A28A7280747270017A2C5 /* MiniFirestoreDemo.cpp */,
+				52086CC02808961E00F0E183 /* demo_credentials.h */,
+				52086CC12808961E00F0E183 /* demo_mini_firestore.cpp */,
 				526A28A52807471F0017A2C5 /* mini_firestore.cpp */,
 				520267CA280746D1004D7AA7 /* Products */,
 			);
@@ -115,7 +117,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				526A28A62807471F0017A2C5 /* mini_firestore.cpp in Sources */,
-				526A28A8280747270017A2C5 /* MiniFirestoreDemo.cpp in Sources */,
+				52086CC22808961E00F0E183 /* demo_mini_firestore.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

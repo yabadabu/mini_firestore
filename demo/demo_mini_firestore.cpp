@@ -323,7 +323,7 @@ void testInc(MiniFireStore::Firestore& db) {
         printf( "Wrote school! >%s<\n", r.str.c_str());
         // Increment a field of a suboject in the same doc
         ref.inc( "director.age", delta, [=](Result& r) {
-            printf( "Incremented by %d! >%s<\n", delta, r.str.c_str());
+            printf( "Incremented by %d! >%s< j=%s\n", delta, r.str.c_str(), r.j.dump().c_str());
             ref.read( [=]( Result& r ) {
                 printf( "read back!\n");
                 assert( !r.err );
@@ -334,6 +334,11 @@ void testInc(MiniFireStore::Firestore& db) {
                 }
             });
         });
+
+        // Beware, updating a non-integer field, will change it to a number, and the json -> School will fail
+        // ref.inc( "director.name", delta, [=](Result& r) {
+        //     printf( "Failed by %d! >%s< j=%s\n", delta, r.str.c_str(), r.j.dump().c_str());
+        // });
     });
 
     while( !db.hasFinished() ) db.update();

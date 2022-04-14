@@ -597,7 +597,21 @@ namespace MiniFireStore
                 },
             }}
         };
-        return db->allocRequest( ":commit", jCmd, cb, "write", RPC_FLAG_TRACE );
+        auto pre_cb = [=]( Result& result ) {
+            // Transform the result into something more easy to parse for the end-user
+            if( !result.err ) {
+                // Just tripple check each blind access
+                assert( result.j.contains( "writeResults" ) );
+                assert( result.j[ "writeResults" ].is_array() );
+                assert( result.j[ "writeResults" ].size() == 1 );
+                assert( result.j[ "writeResults" ][0].contains( "transformResults" ) );
+                assert( result.j[ "writeResults" ][0]["transformResults"].is_array() );
+                assert( result.j[ "writeResults" ][0]["transformResults"].size() == 1 );
+                result.j = fromValue( result.j["writeResults"][0]["transformResults"][0] );
+            }
+            cb( result );
+        };
+        return db->allocRequest( ":commit", jCmd, pre_cb, "inc", RPC_FLAG_TRACE );
     }
 
     // Helpers to convert a OrderBy/Condition to json

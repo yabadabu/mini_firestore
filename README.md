@@ -68,7 +68,9 @@ The Result object returned on each callback contains:
 
 The helper method **get** checks if no error was produced and converts the json to the given type. This works as long as the type has the conversions from json already supported using the nlohmann json api.
 
-## Reading a doc
+## Methods on a Ref
+
+### Reading a doc
 
 Given a ref, use the **read** method to read the current contents at the reference.
 
@@ -83,7 +85,7 @@ Given a ref, use the **read** method to read the current contents at the referen
   }
 ```
 
-## Creating new documents
+### Creating new documents
 
 ```cpp
   Ref ref = fb.ref("users").child(db.uid());
@@ -93,7 +95,7 @@ Given a ref, use the **read** method to read the current contents at the referen
   });	
 ```
 
-## Writing doc
+### Writing doc
 
 ```cpp
   Person person( 40, "John Smith");
@@ -102,15 +104,15 @@ Given a ref, use the **read** method to read the current contents at the referen
   });	
 ```
 
-## Delete 
+### Delete 
 
 ```cpp
   ref.del( []( Result& r ) {
     // The document at ref has been deleted 
-  });	
+  }); 
 ```
 
-## Queries
+### Queries
 
 The query will return an array of all the documents matching the selected filters. The **Query** object is a struct representing the conditions, sort mode and limits. Beware that some filters require an index to be created in the firestore console.
 
@@ -125,6 +127,20 @@ The query will return an array of all the documents matching the selected filter
 ```
 
 You can also process individual members returned by the query iterating over the **json j** member.
+
+### Increment a value
+
+```cpp
+  ref.inc( "director.age", 5, []( Result& r ) {
+    double new_value;
+    if( !r.get( new_value )) 
+      return;
+    // new_value = previous_value + 5
+  }); 
+```
+
+- Fields names can be subfields of the document.
+- Updating a non-number field, will change it to a number. Same if the field does not exists.
 
 ## Log support
 
@@ -152,6 +168,7 @@ public:
 - [x] Queries with filters
 - [x] Async callbacks on top of async curl.
 - [x] Automatic (de)serialization using nlohmann json
+- [x] Increment fields
 
 # Dependencies
 - libcurl (https://curl.se/libcurl)
@@ -160,7 +177,6 @@ public:
 # Missing
 - [ ] Support for date, ref, binary data types
 - [ ] Transactions
-- [ ] Increment fields
 - [ ] Queries with startAt
 - [ ] Better tests
 - [ ] Rest of auth methods
