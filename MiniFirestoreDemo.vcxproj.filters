@@ -12,16 +12,19 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="demo\MiniFirestoreDemo.cpp">
-      <Filter>demo</Filter>
-    </ClCompile>
     <ClCompile Include="src\mini_firestore.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="demo\demo_mini_firestore.cpp">
+      <Filter>demo</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\mini_firestore\mini_firestore.h">
       <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="demo\demo_credentials.h">
+      <Filter>demo</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

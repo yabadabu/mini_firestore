@@ -1,6 +1,6 @@
-#include "mini_firestore/mini_firestore.h"
 #include <cstdio>
 #include <cstdarg>
+#include "mini_firestore/mini_firestore.h"
 
 extern "C" {
 #include <curl/curl.h>
@@ -8,7 +8,8 @@ extern "C" {
 
 #ifdef _WIN32
 #pragma comment(lib, "libcurl.dll.a")
-#define vsnprintf _vsnprintf
+#undef min
+#define vsnprintf _vsnprintf_s
 #endif
 
 namespace MiniFireStore
@@ -200,12 +201,20 @@ namespace MiniFireStore
                 log( eLevel::Trace, "[%p] Request #%d(%s) completes\n", r, r->unique_id, r->label);
                 log( eLevel::Trace, "%s\n", r->str_recv.c_str());
 
-                // Parse the results back to json
-                json& j = r->result.j;
-                j = json::parse(r->str_recv);
+                bool error_detected = r->str_recv.empty();
+                if (!error_detected) {
+                    // Parse the results back to json
+                    json& j = r->result.j;
+                    j = json::parse(r->str_recv, nullptr, false);
+                    if (j.is_discarded()) {
+                        error_detected = true;
+                    } else {
+                        error_detected = j.contains("error") || (j.is_array() && j[0].contains("error"));
+                    }
+                }
 
                 // Check for obvious errors
-                if( j.contains("error") || (j.is_array() && j[0].contains("error") )) {
+                if( error_detected ) {
                     log(eLevel::Error, "%s(%s,%s) Err: %s\n", r->label, r->url.c_str(), r->str_sent.c_str(), r->str_recv.c_str());
                     r->result.err = -1;
                 } else {
@@ -318,7 +327,9 @@ namespace MiniFireStore
         // ...
 
         // This is failing in windows
-        //curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+#ifdef _WIN32
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+#endif
 
         if( r->flags & RPC_FLAG_TRACE ) {
             log( eLevel::Trace, "URL:%s\n", r->url.c_str() );

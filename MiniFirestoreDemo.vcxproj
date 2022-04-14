@@ -19,10 +19,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="demo\MiniFirestoreDemo.cpp" />
+    <ClCompile Include="demo\demo_mini_firestore.cpp" />
     <ClCompile Include="src\mini_firestore.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="demo\demo_credentials.h" />
     <ClInclude Include="include\mini_firestore\mini_firestore.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
