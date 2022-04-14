@@ -14,7 +14,7 @@ The library has been tested in Windows and OSX
 
 ## Initialization
 
-libCurl requires a global initialization to be called. If you are not already using libCurl, you should call globalInit()/globalCleanup() to perform this initialization.
+libCurl requires a global initialization to be called. If you are not already using libCurl, you should call **globalInit()**/**globalCleanup()** to perform this initialization.
 
 ## Connecting
 
@@ -23,6 +23,8 @@ the database name and the API key. You also need to configure the database to ac
 login method as an authentication method in the firebase administration console. Right now it's the only supported method.
 
 ```cpp
+    using namespace MiniFireStore;
+    
     Firestore db;
     db.configure( "YOUR_DATABASE_NAME", "YOUR_API_KEY" );
     const char* email = "user_email";
@@ -157,6 +159,8 @@ public:
 
 # Missing
 - [ ] Support for date, ref, binary data types
+- [ ] Transactions
+- [ ] Increment fields
 - [ ] Queries with startAt
 - [ ] Better tests
 - [ ] Rest of auth methods
