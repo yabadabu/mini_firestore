@@ -142,6 +142,17 @@ You can also process individual members returned by the query iterating over the
 - Fields names can be subfields of the document.
 - Updating a non-number field, will change it to a number. Same if the field does not exists.
 
+### Patch a document
+
+```cpp
+  Person new_director( 34, "Sr. Smith");
+  ref.patch( "director", new_director, []( Result& r ) {
+    // Member director updated to the new_director object
+  }); 
+```
+
+This allows to update just a member of a document, instead of sending the full document.
+
 ## Log support
 
 You can hook to log/error/trace events using the **setLogCallback** and **setLogLevel**.
@@ -168,18 +179,17 @@ As json does not have a specific type for date/times, date times are stored as s
 
 # Features
 - [x] Authentication using email/pass
-- [x] Full read/write/del/add
+- [x] Full read/write/del/add/patch/inc
 - [x] Queries with filters
 - [x] Async callbacks on top of async curl.
 - [x] Automatic (de)serialization using nlohmann json
-- [x] Increment fields
-- [x] Support date time (secs precision)
 
 # Dependencies
 - libcurl (https://curl.se/libcurl)
 - nlohmann json (https://github.com/nlohmann/json)
 
 # Missing
+- [ ] Support date time (secs precision).. This should be RFC3339 UTC "Zulu" format, not ISO8601
 - [ ] Support for ref, binary data types
 - [ ] Transactions
 - [ ] Queries with startAt

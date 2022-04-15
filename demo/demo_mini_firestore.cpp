@@ -391,6 +391,33 @@ void testTime(MiniFireStore::Firestore& db) {
     while( !db.hasFinished() ) db.update();
 }
 
+void testList(Firestore& db) {
+    Ref ref = db.ref( "users" ).child( db.uid() );
+    ref.list( [](Result& r) {
+        printf( "List Result.j=%s\nStr:%s\n", r.j.dump().c_str(), r.str.c_str());
+    });
+    while( !db.hasFinished() ) db.update();
+}
+
+void testPatch(Firestore& db) {
+    Ref ref = db.ref( "users" ).child( db.uid() ).child( "tests/patch" );
+    School p = initSchool();
+    ref.write( p, [=]( Result& r ) {
+        Person new_director( 99, "Old Man");
+        ref.patch( "director", new_director, [=]( Result& r ) {
+            printf( "patch Result.j=%s\nStr:%s\n", r.j.dump().c_str(), r.str.c_str());
+            ref.read( [=](Result& r ) {
+                School ps;
+                if( r.get( ps )) {
+                    printf( "Checking director has been updated\n" );
+                    assert( ps.director == new_director );
+                }
+            });
+        });
+    });
+    while( !db.hasFinished() ) db.update();
+}
+
 class MySample {
 public:
     void myLog( MiniFireStore::eLevel level, const char* msg ) {
@@ -413,8 +440,9 @@ int main(int argc, char** argv)
             printf("Login failed: %s\n", result.j.dump().c_str());
             return;
         }
+        testPatch(db);
+        testList(db);
         testTime(db);
-        return;
         testInc(db);
         testSubCollections(db);
         testDelete(db);

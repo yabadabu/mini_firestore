@@ -26,6 +26,8 @@ namespace MiniFireStore
     static const int RPC_FLAG_DELETE = 1;
     static const int RPC_FLAG_TRACE = 2;
     static const int RPC_FLAG_CONNECT = 4;
+    static const int RPC_FLAG_GET = 8;
+    static const int RPC_FLAG_PATCH = 16;
 
     const char* conditionOperatorName( Condition::Operator op ) {
         switch( op ) {
@@ -349,6 +351,14 @@ namespace MiniFireStore
             curl_easy_setopt(curl, CURLOPT_POST, 1L);
         }
 
+        if( r->flags & RPC_FLAG_GET ) {
+            curl_easy_setopt(curl, CURLOPT_POST, 0L);
+        }
+
+        if( r->flags & RPC_FLAG_PATCH ) {
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
+        }
+
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &CurlAppendToRequest);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, r);
 
@@ -561,7 +571,7 @@ namespace MiniFireStore
             cb( result );
         };
 
-        allocRequest( url.c_str(), j, pre_cb, "connect", RPC_FLAG_CONNECT );
+        allocRequest( url, j, pre_cb, "connect", RPC_FLAG_CONNECT );
     }
 
     void Firestore::setToken( const std::string& new_token ) {
@@ -608,7 +618,7 @@ namespace MiniFireStore
     }
 
     uint32_t Ref::del(Callback cb) const {
-        return db->allocRequest( doc_id.c_str(), nullptr, cb, "del", RPC_FLAG_DELETE );
+        return db->allocRequest( doc_id, nullptr, cb, "del", RPC_FLAG_DELETE );
     }
 
     uint32_t Ref::add(const json& j, Callback cb) const {
@@ -619,7 +629,7 @@ namespace MiniFireStore
             }
             cb( result );
         };
-        return db->allocRequest( doc_id.c_str(), asDocument( j ), pre_cb, "add" );
+        return db->allocRequest( doc_id, asDocument( j ), pre_cb, "add" );
     }
 
     uint32_t Ref::write(const json& j, Callback cb) const {
@@ -665,7 +675,17 @@ namespace MiniFireStore
             }
             cb( result );
         };
-        return db->allocRequest( ":commit", jCmd, pre_cb, "inc", RPC_FLAG_TRACE );
+        return db->allocRequest( ":commit", jCmd, pre_cb, "inc" );
+    }
+
+    uint32_t Ref::list(Callback cb) const {
+        return db->allocRequest( doc_id, nullptr, cb, "list", RPC_FLAG_GET );
+    }
+
+    uint32_t Ref::patch(const std::string& field_name, const json& new_value, Callback cb) const {
+        std::string url = doc_id + "?updateMask.fieldPaths=" + field_name + "&mask.fieldPaths=" + field_name;
+        json j = {{ field_name, new_value }};
+        return db->allocRequest( url, asDocument(j), cb, "patch", RPC_FLAG_PATCH );
     }
 
     // Helpers to convert a OrderBy/Condition to json
