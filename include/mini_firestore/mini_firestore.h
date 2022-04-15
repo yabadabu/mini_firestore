@@ -145,4 +145,8 @@ namespace MiniFireStore
     using LogCallback = std::function<void(eLevel verbosity, const char* msg)>;
     void setLogCallback( LogCallback new_callback );
     void setLogLevel( eLevel new_level );
+
+    // -------------------------------------------------------
+    json timeToISO8601(time_t utc_time); 
+    bool ISO8601ToTime(const json& j, time_t* out_time_t);
 }

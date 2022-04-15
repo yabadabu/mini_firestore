@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstdarg>
+#include <ctime>
 #include "mini_firestore/mini_firestore.h"
 
 extern "C" {
@@ -356,6 +357,51 @@ namespace MiniFireStore
     }
 
     // ------------------------------------------------------------
+    json timeToISO8601(time_t utc_time) {
+        char buf[sizeof "2011-10-08T07:07:09.000Z"];
+        struct tm tm_buf;
+        strftime(buf, sizeof buf, "%FT%TZ", gmtime_r(&utc_time, &tm_buf));
+        return buf;
+    }
+
+    bool ISO8601ToTime(const json& j, time_t* out_time_t) {
+        if( !j.is_string() || !out_time_t)
+            return false;
+        std::string str = j.get< std::string >();
+        if( str.empty() )
+            return false;
+
+        struct tm tm = {0};
+        strptime(str.c_str(), "%FT%TZ", &tm );
+        tm.tm_isdst = 0;
+        time_t time_stamp = mktime(&tm);
+
+        // Substract the timezone
+        struct tm tm_a;
+        struct tm tm_b;
+        time_t t0 = 1000000;
+        struct tm* gmt = gmtime_r(&t0, &tm_a);
+        struct tm* gml = localtime_r(&t0, &tm_b);
+        int delta = (gml->tm_hour - gmt->tm_hour);
+        time_stamp += delta * 3600;
+        *out_time_t = time_stamp;
+        return true;
+    }
+
+    // Does it look like a timestamp?
+    // 2022-04-15T14:25:30Z
+    bool isTimeISO8601(const std::string& str) {
+        if( str.length() >= 20 ) {
+            if( str[ 4] == '-' && str[ 7] == '-' && str[10] =='T' 
+             && str[13] == ':' && str[16] == ':' && str.back() == 'Z') {
+                // Check are all others are digits?
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // ------------------------------------------------------------
     bool globalInit() {
         // In windows, this will init the winsock stuff
         CURLcode rc = curl_global_init(CURL_GLOBAL_ALL);
@@ -373,7 +419,12 @@ namespace MiniFireStore
 
     json asValue( const json& inValue ) {
         if( inValue.is_string() ) {
-            return {{ "stringValue", inValue.get<std::string>().c_str() }};
+            std::string str = inValue.get<std::string>();
+            
+            if( isTimeISO8601( str )) 
+                return {{ "timestampValue", str }};
+
+            return {{ "stringValue", str }};
         }
         if( inValue.is_boolean() ) {
             return {{ "booleanValue", inValue.get<bool>() }};
@@ -429,6 +480,9 @@ namespace MiniFireStore
 
         } else if( j.contains( "booleanValue") ) {
             return j["booleanValue"];
+
+        } else if( j.contains( "timestampValue") ) {
+            return j["timestampValue"];
 
         } else if( j.contains( "arrayValue") ) {
             const json& values = j["arrayValue"]["values"];

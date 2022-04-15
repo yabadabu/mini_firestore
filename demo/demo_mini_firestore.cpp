@@ -24,6 +24,24 @@ void from_json(const json& j, Person& p) {
     p.age = j.value("age", p.age );
 }
 
+// ----------------------------------
+struct TimeObj {
+    time_t time_stamp;
+    TimeObj() {
+        time(&time_stamp);
+    }
+};
+
+void to_json(json& j, const TimeObj& p) {
+    j["time_stamp"] = timeToISO8601( p.time_stamp );
+}
+
+void from_json(const json& j, TimeObj& p) {
+    if( j.contains("time_stamp"))
+        ISO8601ToTime( j["time_stamp"], &p.time_stamp );
+}
+
+// ----------------------------------
 struct School {
     std::vector< Person > population;
     std::string           city;
@@ -344,6 +362,35 @@ void testInc(MiniFireStore::Firestore& db) {
     while( !db.hasFinished() ) db.update();
 }
 
+void testTime(MiniFireStore::Firestore& db) {
+    
+    Ref ref = db.ref( "users" ).child( db.uid() ).child( "tests/time_conversions");
+    ref.read([=](Result& r) {
+        printf( "time read result.j=%s\n", r.j.dump().c_str());
+    });
+
+    Ref refw = db.ref( "users" ).child( db.uid() ).child( "tests/time_store");
+    TimeObj tobj;
+    refw.write(tobj, [=](Result& r) {
+        //printf( "Wrote>%s< j=%s\n", r.str.c_str(), r.j.dump().c_str());
+        refw.read([=](Result& r) {
+            //printf( "Reading back>%s< j=%s\n", r.str.c_str(), r.j.dump().c_str());
+            TimeObj tobj2;
+            tobj2.time_stamp = 0;
+            if( r.get(tobj2) ) {
+                if( tobj.time_stamp == tobj2.time_stamp ) {
+                    printf( "Time values match %ld!!\n", tobj2.time_stamp );
+                } else {
+                    printf( "Time values do NOT match %ld vs %ld!!\n", tobj.time_stamp, tobj2.time_stamp );
+                    assert(tobj.time_stamp == tobj2.time_stamp);
+                }
+            }
+        });
+    });
+
+    while( !db.hasFinished() ) db.update();
+}
+
 class MySample {
 public:
     void myLog( MiniFireStore::eLevel level, const char* msg ) {
@@ -366,6 +413,8 @@ int main(int argc, char** argv)
             printf("Login failed: %s\n", result.j.dump().c_str());
             return;
         }
+        testTime(db);
+        return;
         testInc(db);
         testSubCollections(db);
         testDelete(db);

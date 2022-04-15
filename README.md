@@ -162,6 +162,10 @@ public:
   MiniFireStore::setLogCallback(std::bind(&MySample::myLog, &s, std::placeholders::_1, std::placeholders::_2));
 ```
 
+## DateTime Conversion
+
+As json does not have a specific type for date/times, date times are stored as strings, but when sent to firestore, if the string looks like an iso8601 string, it's sent to firestore as a **timestampValue**. The functions ISO8601ToTime and timeToISO8601 converts from json to time_t and viceversa.
+
 # Features
 - [x] Authentication using email/pass
 - [x] Full read/write/del/add
@@ -169,13 +173,14 @@ public:
 - [x] Async callbacks on top of async curl.
 - [x] Automatic (de)serialization using nlohmann json
 - [x] Increment fields
+- [x] Support date time (secs precision)
 
 # Dependencies
 - libcurl (https://curl.se/libcurl)
 - nlohmann json (https://github.com/nlohmann/json)
 
 # Missing
-- [ ] Support for date, ref, binary data types
+- [ ] Support for ref, binary data types
 - [ ] Transactions
 - [ ] Queries with startAt
 - [ ] Better tests
