@@ -3,14 +3,24 @@
 #include <ctime>
 #include "mini_firestore/mini_firestore.h"
 
+// Windows specifics
+#ifdef _WIN32
+
 extern "C" {
 #include <curl/curl.h>
 }
 
-#ifdef _WIN32
 #pragma comment(lib, "libcurl.dll.a")
 #undef min
 #define vsnprintf _vsnprintf_s
+struct tm* gmtime_r(const time_t* timer, struct tm* user_tm) {
+  gmtime_s(user_tm, timer);
+  return user_tm;
+}
+struct tm* localtime_r(const time_t* timer, struct tm* user_tm) {
+  localtime_s(user_tm, timer);
+  return user_tm;
+}
 #endif
 
 namespace MiniFireStore
@@ -381,8 +391,13 @@ namespace MiniFireStore
         if( str.empty() )
             return false;
 
-        struct tm tm = {0};
-        strptime(str.c_str(), "%FT%TZ", &tm );
+        int msec = 0;   // Not currently used
+        struct tm tm = { 0 };
+        int n = sscanf_s(str.c_str(), "%04d-%02d-%02dT%02d:%02d:%02d.%dZ", &tm.tm_year, &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec, &msec);
+        tm.tm_year -= 1900;
+        tm.tm_mon -= 1;
+        if (n != 6)
+          return false;
         tm.tm_isdst = 0;
         time_t time_stamp = mktime(&tm);
 

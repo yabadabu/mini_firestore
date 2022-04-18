@@ -364,6 +364,17 @@ void testInc(MiniFireStore::Firestore& db) {
 
 void testTime(MiniFireStore::Firestore& db) {
     
+  time_t now = time(nullptr);
+  json j = timeToISO8601(now);
+  time_t now_read;
+  bool is_ok = ISO8601ToTime(j, &now_read);
+  int delta = now_read - now;
+  if (delta) {
+    printf("Time values do NOT match %ld vs %ld!! Err:%d (%f hours)\n", now, now_read, delta, delta / 3600.0f);
+    assert(false);
+  }
+
+
     Ref ref = db.ref( "users" ).child( db.uid() ).child( "tests/time_conversions");
     ref.read([=](Result& r) {
         printf( "time read result.j=%s\n", r.j.dump().c_str());
@@ -381,7 +392,7 @@ void testTime(MiniFireStore::Firestore& db) {
                 if( tobj.time_stamp == tobj2.time_stamp ) {
                     printf( "Time values match %ld!!\n", tobj2.time_stamp );
                 } else {
-                    printf( "Time values do NOT match %ld vs %ld!!\n", tobj.time_stamp, tobj2.time_stamp );
+                    printf( "Time values do NOT match %ld vs %ld!! Err:%d\n", tobj.time_stamp, tobj2.time_stamp, tobj.time_stamp - tobj2.time_stamp);
                     assert(tobj.time_stamp == tobj2.time_stamp);
                 }
             }
@@ -440,9 +451,9 @@ int main(int argc, char** argv)
             printf("Login failed: %s\n", result.j.dump().c_str());
             return;
         }
+        testTime(db);
         testPatch(db);
         testList(db);
-        testTime(db);
         testInc(db);
         testSubCollections(db);
         testDelete(db);
