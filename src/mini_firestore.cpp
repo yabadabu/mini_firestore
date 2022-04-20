@@ -3,16 +3,17 @@
 #include <ctime>
 #include "mini_firestore/mini_firestore.h"
 
-// Windows specifics
-#ifdef _WIN32
-
 extern "C" {
 #include <curl/curl.h>
 }
 
+// Windows specifics
+#ifdef _WIN32
+
 #pragma comment(lib, "libcurl.dll.a")
 #undef min
 #define vsnprintf _vsnprintf_s
+#define sscanf sscanf_s
 struct tm* gmtime_r(const time_t* timer, struct tm* user_tm) {
   gmtime_s(user_tm, timer);
   return user_tm;
@@ -393,7 +394,7 @@ namespace MiniFireStore
 
         int msec = 0;   // Not currently used
         struct tm tm = { 0 };
-        int n = sscanf_s(str.c_str(), "%04d-%02d-%02dT%02d:%02d:%02d.%dZ", &tm.tm_year, &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec, &msec);
+        int n = sscanf(str.c_str(), "%04d-%02d-%02dT%02d:%02d:%02d.%dZ", &tm.tm_year, &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec, &msec);
         tm.tm_year -= 1900;
         tm.tm_mon -= 1;
         if (n != 6)
