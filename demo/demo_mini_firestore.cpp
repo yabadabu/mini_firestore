@@ -392,7 +392,7 @@ void testTime(MiniFireStore::Firestore& db) {
                 if( tobj.time_stamp == tobj2.time_stamp ) {
                     printf( "Time values match %d!!\n", (uint32_t)tobj2.time_stamp );
                 } else {
-                    printf( "Time values do NOT match %d vs %d!! Err:%ld\n", (uint32_t)tobj.time_stamp, (uint32_t)tobj2.time_stamp, (int)(tobj.time_stamp - tobj2.time_stamp));
+                    printf( "Time values do NOT match %d vs %d!! Err:%d\n", (uint32_t)tobj.time_stamp, (uint32_t)tobj2.time_stamp, (int)(tobj.time_stamp - tobj2.time_stamp));
                     assert(tobj.time_stamp == tobj2.time_stamp);
                 }
             }
