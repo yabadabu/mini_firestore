@@ -212,7 +212,7 @@ void testSubCollections( Firestore& db ) {
                     std::vector< Person > people;
                     if( !r.get( people ))
                       return;
-                    printf( "It has %ld connections registered!\n", people.size());
+                    printf( "It has %d connections registered!\n", (int)people.size());
                 });
             }
         };
@@ -368,9 +368,9 @@ void testTime(MiniFireStore::Firestore& db) {
   json j = timeToISO8601(now);
   time_t now_read;
   bool is_ok = ISO8601ToTime(j, &now_read);
-  int delta = now_read - now;
+  time_t delta = now_read - now;
   if (delta) {
-    printf("Time values do NOT match %ld vs %ld!! Err:%d (%f hours)\n", now, now_read, delta, delta / 3600.0f);
+    printf("Time values do NOT match %d vs %d!! Err:%d (%f hours)\n", (uint32_t)now, (uint32_t)now_read, (int)delta, delta / 3600.0f);
     assert(false);
   }
 
@@ -390,9 +390,9 @@ void testTime(MiniFireStore::Firestore& db) {
             tobj2.time_stamp = 0;
             if( r.get(tobj2) ) {
                 if( tobj.time_stamp == tobj2.time_stamp ) {
-                    printf( "Time values match %ld!!\n", tobj2.time_stamp );
+                    printf( "Time values match %d!!\n", (uint32_t)tobj2.time_stamp );
                 } else {
-                    printf( "Time values do NOT match %ld vs %ld!! Err:%d\n", tobj.time_stamp, tobj2.time_stamp, tobj.time_stamp - tobj2.time_stamp);
+                    printf( "Time values do NOT match %d vs %d!! Err:%ld\n", (uint32_t)tobj.time_stamp, (uint32_t)tobj2.time_stamp, (int)(tobj.time_stamp - tobj2.time_stamp));
                     assert(tobj.time_stamp == tobj2.time_stamp);
                 }
             }
