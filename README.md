@@ -8,7 +8,20 @@ To compile, the nlohmann headers must be accessible (included in the repo)
 You also need to link with the curllib (windows version included)
 Sorry, no fancy CMakefile this time.
 
-The library has been tested in Windows and OSX
+The library has been tested in Windows, Linux and OSX
+
+## Linux
+
+To compile the sample:
+
+```console
+  apt-get install libcurl4-openssl-dev   (in case libcurl-dev is not installed already)
+  git clone https://github.com/yabadabu/mini_firestore.git
+  cd mini_firestore
+  vi demo/demo_credentials.h             (enter credentials)
+  make
+  ./app                                  (run the sample)
+```
 
 # Usage
 
