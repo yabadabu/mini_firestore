@@ -2,7 +2,7 @@ TARGET : app
 
 CXXFLAGS=-c -Iinclude -std=c++11
 #CXXFLAGS+=-O2
-LIBS+=-lstdc++ -lcurl
+LIBS+=-lcurl -lstdc++
 
 VPATH=src
 VPATH+=demo
@@ -16,7 +16,7 @@ objs/%.o : %.cpp include/mini_firestore/mini_firestore.h Makefile demo/demo_cred
 
 app : ${OBJS}
 	@echo Linking $@
-	@$(CC) $(LIBS) $+ -o $@
+	@$(CC) $+ $(LIBS) -o $@
 
 clean :
 	rm -f objs/*
