@@ -14,11 +14,11 @@ In order to run the tests, you need to update the file demo/demo_credentials.h a
 
 ## Windows
 
-Open and run MiniFirestoreDemo.sln. libCurl dependencies are included for convenience
+Open and run MiniFirestoreDemo.sln. libCurl dependencies are included for convenience.
 
 ## Mac
 
-Open and run firestore_demo_osx.xcodepro
+Open and run firestore_demo_osx.xcodeproj
 
 ## Linux
 
@@ -65,7 +65,9 @@ login method as an authentication method in the firebase administration console.
 
 You should have a Firestore db per connection, beware the Ref objects hold a pointer to the db they belong to.
 
-**None of the methods will block**. But you need to periodically call the **db.update()** to check if any of the tasks have finished and dispatch the callbacks.
+**None of the methods will block**. But you need to periodically call the **db.update()** to check if any of the tasks have finished and dispatch the callbacks, so the callbacks will be executed by the thread calling the db.update().
+
+The library is **not** thread safe.
 
 ## Ref's
 
