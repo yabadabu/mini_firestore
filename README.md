@@ -10,12 +10,22 @@ Sorry, no fancy CMakefile this time.
 
 The library has been tested in Windows, Linux and OSX
 
+In order to run the tests, you need to update the file demo/demo_credentials.h and enter your database name, api key.
+
+## Windows
+
+Open and run MiniFirestoreDemo.sln. libCurl dependencies are included for convenience
+
+## Mac
+
+Open and run firestore_demo_osx.xcodepro
+
 ## Linux
 
 To compile the sample:
 
 ```console
-  apt-get install libcurl4-openssl-dev   (in case libcurl-dev is not installed already)
+  apt-get install libcurl4-openssl-dev   (in case libcurl-dev is not already installed)
   git clone https://github.com/yabadabu/mini_firestore.git
   cd mini_firestore
   vi demo/demo_credentials.h             (enter credentials)
