@@ -281,7 +281,10 @@ namespace MiniFireStore
     r->result = Result();
     r->url = url;
     r->str_recv.clear();
-    r->str_sent = jbody.dump(2, ' ');
+    if( !jbody.is_null() )
+      r->str_sent = jbody.dump((flags & RPC_FLAG_TRACE) ? 2 : 0, ' ');
+    else
+      r->str_sent.clear();
     r->send_offset = 0;
     r->label = label;
     r->flags = flags;
@@ -364,6 +367,7 @@ namespace MiniFireStore
       curl_easy_setopt(curl, CURLOPT_READFUNCTION, &CurlReadFromRequest);
       curl_easy_setopt(curl, CURLOPT_READDATA, r);
       curl_easy_setopt(curl, CURLOPT_POST, 1L);
+      curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, r->str_sent.size());
     }
 
     if (r->flags & RPC_FLAG_GET) {
@@ -605,7 +609,9 @@ namespace MiniFireStore
         setToken(new_token);
       }
       else {
-        result.err = result.j["error"]["code"].get<int>();
+        if (result.j.contains("error")) {
+          result.err = result.j["error"]["code"].get<int>();
+        }
       }
       cb(result);
     };
