@@ -4,12 +4,13 @@
 #include <functional>
 
 #include <nlohmann/json.hpp>
-using json = nlohmann::json;
 
 struct curl_slist;
 
 namespace MiniFireStore
 {
+
+  using json = nlohmann::json;
 
   struct Result;
   class Firestore;
@@ -74,13 +75,14 @@ namespace MiniFireStore
 
   private:
 
-    Firestore* db = nullptr;
-    std::string  doc_id;
+    Firestore*  db = nullptr;
+    std::string doc_id;
 
     bool sendRPC(const char* url_suffix, const json& body, Result& result, const char* label, int flags = 0) const;
   };
 
   struct Result {
+    uint32_t    req_unique_id = 0;
     int         err = -1;
     std::string str;
     json        j;
@@ -93,6 +95,8 @@ namespace MiniFireStore
       obj = j.get<T>();
       return true;
     }
+
+    static const std::string& getDocKeyName();
 
   };
 
@@ -108,8 +112,9 @@ namespace MiniFireStore
 
     void configure(const char* project_id, const char* api_key);
 
-    void signUp(const char* email, const char* password, Callback cb);
-    void connect(const char* email, const char* password, Callback cb);
+    void signUp(const std::string& email, const std::string& password, Callback cb);
+    void connect(const std::string& email, const std::string& password, Callback cb);
+    void connectOrSignUp(const std::string& email, const std::string& password, Callback cb);
     void disconnect();
 
     bool update();
@@ -124,7 +129,7 @@ namespace MiniFireStore
   private:
 
     void setToken(const std::string& new_token);
-    void authRequest(const char* url_base, const char* email, const char* password, Callback cb);
+    void authRequest(const char* url_base, const std::string& email, const std::string& password, Callback cb);
 
     std::string user_id;
     std::string api_key;
@@ -154,4 +159,6 @@ namespace MiniFireStore
   // -------------------------------------------------------
   json timeToISO8601(time_t utc_time);
   bool ISO8601ToTime(const json& j, time_t* out_time_t);
+  bool isTimeISO8601(const std::string& str);
+
 }

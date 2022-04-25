@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <cstdarg>
 #include <ctime>
-#include "mini_firestore/mini_firestore.h"
+#include "mini_firestore.h"
 
 extern "C" {
 #include <curl/curl.h>
@@ -10,7 +10,6 @@ extern "C" {
 // Windows specifics
 #ifdef _WIN32
 
-#pragma comment(lib, "libcurl.dll.a")
 #undef min
 #define vsnprintf _vsnprintf_s
 #define sscanf sscanf_s
@@ -32,6 +31,7 @@ namespace MiniFireStore
     const char* api_firestore_url = "https://firestore.googleapis.com/v1/projects/";
     const char* auth_bearer = "Authorization: Bearer ";         // <-- Has already a space in the right
     const char* json_content_header = "Content-Type: application/json";
+    const std::string json_doc_id_key = "_doc_id";
     //const char* client_header = "x-firebase-client";
   }
 
@@ -89,7 +89,7 @@ namespace MiniFireStore
 
   // -----------------------------------------
   struct Request {
-    uint32_t    unique_id;
+    uint32_t    req_unique_id = 0;          // Automatically generated sequence
     Result      result;
     std::string url;
 
@@ -154,9 +154,11 @@ namespace MiniFireStore
       }
       else {
         r = new Request();
-        log(eLevel::Trace, "[%p] alloc new\n", r);
+        log(eLevel::Trace, "[%p] alloc new", r);
       }
-      r->unique_id = ++next_request_unique_id;
+      // Request and result have the same unique id
+      r->req_unique_id = ++next_request_unique_id;
+      r->result.req_unique_id = r->req_unique_id;
       return r;
     }
 
@@ -179,7 +181,7 @@ namespace MiniFireStore
       // Now we can reuse the request
       free_requests.push_back(r);
 
-      log(eLevel::Trace, "[%p] returns to the pool (now %ld)\n", r, free_requests.size());
+      log(eLevel::Trace, "[%p] returns to the pool (now %ld)", r, free_requests.size());
 
       curl_multi_remove_handle(multi_handle, curl);
 
@@ -192,7 +194,7 @@ namespace MiniFireStore
       int num_handles = (int)on_the_fly_request.size();
       CURLMcode rc = curl_multi_perform(multi_handle, &num_handles);
       if (rc) {
-        log(eLevel::Error, "curl_multi_perform() failed, code %d.\n", (int)rc);
+        log(eLevel::Error, "curl_multi_perform() failed, code %d.", (int)rc);
         return false;
       }
 
@@ -214,8 +216,8 @@ namespace MiniFireStore
           Request* r = it->second;
           assert(r);
 
-          log(eLevel::Trace, "[%p] Request #%d(%s) completes\n", r, r->unique_id, r->label);
-          log(eLevel::Trace, "%s\n", r->str_recv.c_str());
+          log(eLevel::Trace, "[%p] Request #%d(%s) completes", r, r->req_unique_id, r->label);
+          log(eLevel::Trace, "%s", r->str_recv.c_str());
 
           bool error_detected = r->str_recv.empty();
           if (!error_detected) {
@@ -232,7 +234,7 @@ namespace MiniFireStore
 
           // Check for obvious errors
           if (error_detected) {
-            log(eLevel::Error, "%s(%s,%s) Err: %s\n", r->label, r->url.c_str(), r->str_sent.c_str(), r->str_recv.c_str());
+            log(eLevel::Error, "%s(%s,%s) Err: %s", r->label, r->url.c_str(), r->str_sent.c_str(), r->str_recv.c_str());
             r->result.err = -1;
           }
           else {
@@ -290,10 +292,10 @@ namespace MiniFireStore
     r->flags = flags;
     r->callback = callback;
 
-    log(eLevel::Trace, "[%p] Request added #%d (%s)\n", r, r->unique_id, label);
+    log(eLevel::Trace, "[%p] Request added #%d (%s)", r, r->req_unique_id, label);
     otf->registerRequest(r);
 
-    return r->unique_id;
+    return r->req_unique_id;
   }
 
   bool Firestore::hasFinished() const {
@@ -304,7 +306,7 @@ namespace MiniFireStore
     if (otf) {
       for (auto it : otf->on_the_fly_request) {
         Request* r = it.second;
-        log(eLevel::Log, "[%p] %s %s\n", r, r->label, r->url.c_str());
+        log(eLevel::Log, "[%p] %s %s", r, r->label, r->url.c_str());
       }
     }
   }
@@ -318,8 +320,8 @@ namespace MiniFireStore
     assert(r);
     size_t num_bytes = size * nitems;
     r->str_recv.append(buffer, num_bytes);
-    //printf( "[%p] Recv body of %ld bytes. New total %ld\n", r, num_bytes, r->str_recv.length());
-    //printf( "%s\n", r->str_recv.c_str());
+    //log(eLevel::Trace, "[%p] Recv body of %ld bytes. New total %ld", r, num_bytes, r->str_recv.length());
+    //log(eLevel::Trace, "%s", r->str_recv.c_str());
     return num_bytes;
   }
 
@@ -329,7 +331,7 @@ namespace MiniFireStore
     size_t num_bytes = size * nitems;
     size_t remaining_bytes = r->str_sent.length() - r->send_offset;
     size_t bytes_to_send = std::min(num_bytes, remaining_bytes);
-    //printf( "[%p] Request body of %ld bytes from %ld -> %ld sent\n", r, num_bytes, r->send_offset, bytes_to_send);
+    //log(eLevel::Trace, "[%p] Request body of %ld bytes from %ld -> %ld sent", r, num_bytes, r->send_offset, bytes_to_send);
     memcpy(buffer, r->str_sent.data() + r->send_offset, bytes_to_send);
     r->send_offset += bytes_to_send;
     return bytes_to_send;
@@ -343,7 +345,7 @@ namespace MiniFireStore
 
     if (r->flags & RPC_FLAG_DELETE) {
       if (r->flags & RPC_FLAG_TRACE)
-        log(eLevel::Log, "Custom request delete\n");
+        log(eLevel::Log, "Custom request delete");
       curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
     }
 
@@ -356,14 +358,14 @@ namespace MiniFireStore
 #endif
 
     if (r->flags & RPC_FLAG_TRACE) {
-      log(eLevel::Log, "URL:%s\n", r->url.c_str());
+      log(eLevel::Log, "URL:%s", r->url.c_str());
       curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
     }
 
     if (!r->str_sent.empty()) {
       // Convert json to string
       if (r->flags & RPC_FLAG_TRACE)
-        log(eLevel::Log, "BODY:%s\n", r->str_sent.c_str());
+        log(eLevel::Log, "BODY:%s", r->str_sent.c_str());
       curl_easy_setopt(curl, CURLOPT_READFUNCTION, &CurlReadFromRequest);
       curl_easy_setopt(curl, CURLOPT_READDATA, r);
       curl_easy_setopt(curl, CURLOPT_POST, 1L);
@@ -463,9 +465,6 @@ namespace MiniFireStore
     if (inValue.is_boolean()) {
       return { { "booleanValue", inValue.get<bool>() } };
     }
-    if (inValue.is_null()) {
-      return { { "nullValue", nullptr } };
-    }
     if (inValue.is_array()) {
       json outValue = json::value_t::array;
       for (const json& j : inValue) {
@@ -473,16 +472,19 @@ namespace MiniFireStore
       }
       return { { "arrayValue", {{ "values", outValue }}} };
     }
-    // if( inValue....() ) {
-    //     return {{ "bytesValue", nullptr }};
-    // }
     if (inValue.is_object()) {
       return { { "mapValue", asDocument(inValue) } };
     }
     if (inValue.is_number()) {
       return { { "doubleValue", inValue } };
     }
-    return 2;
+    if (inValue.is_null()) {
+      return { { "nullValue", nullptr } };
+    }
+    // if( inValue....() ) {
+    //     return {{ "bytesValue", nullptr }};
+    // }
+    return json();
   }
 
   json asDocument(const json& inDoc) {
@@ -541,7 +543,7 @@ namespace MiniFireStore
     return outValue;
   }
 
-  std::string idFromPath(const std::string& path) {
+  static std::string idFromPath(const std::string& path) {
     std::string::size_type pos = path.rfind('/');
     if (pos != std::string::npos)
       return path.substr(pos + 1);
@@ -580,15 +582,26 @@ namespace MiniFireStore
     user_id.clear();
   }
 
-  void Firestore::signUp(const char* email, const char* password, Callback cb) {
+  void Firestore::signUp(const std::string& email, const std::string& password, Callback cb) {
     authRequest(Ctes::api_signup_host, email, password, cb);
   }
 
-  void Firestore::connect(const char* email, const char* password, Callback cb) {
+  void Firestore::connect(const std::string& email, const std::string& password, Callback cb) {
     authRequest(Ctes::api_verify_password_host, email, password, cb);
   }
 
-  void Firestore::authRequest(const char* url_base, const char* email, const char* password, Callback cb) {
+  void Firestore::connectOrSignUp(const std::string& email, const std::string& password, Callback cb) {
+    connect(email, password, [=](Result& r) {
+      if (r.err == ERR_AUTH_EMAIL_NOT_FOUND) {
+        log(eLevel::Log, "Email not found. Signing up");
+        signUp(email, password, cb);
+        return;
+      }
+      cb(r);
+    });
+  }
+
+  void Firestore::authRequest(const char* url_base, const std::string& email, const std::string& password, Callback cb) {
     assert(otf);
 
     std::string url = url_base;
@@ -605,7 +618,7 @@ namespace MiniFireStore
       if (!result.err) {
         user_id = result.j.value("localId", "");
         std::string new_token = result.j.value("idToken", "");
-        log(eLevel::Log, "Local UID: %s\n", user_id.c_str());
+        log(eLevel::Log, "Local UID: %s", user_id.c_str());
         setToken(new_token);
       }
       else {
@@ -620,7 +633,7 @@ namespace MiniFireStore
   }
 
   void Firestore::setToken(const std::string& new_token) {
-    log(eLevel::Log, "Token: %s\n", new_token.c_str());
+    log(eLevel::Log, "Token: %s", new_token.c_str());
     token = new_token;
     otf->setToken(new_token);
   }
@@ -795,7 +808,9 @@ namespace MiniFireStore
           if (el.contains("document")) {
             const json& jdoc = el["document"];
             result.j.push_back(fromValue(jdoc));
-            result.j.back()["id"] = idFromPath(jdoc["name"]);
+            
+            // The doc_id is stored in a member 
+            result.j.back()[Ctes::json_doc_id_key] = idFromPath(jdoc["name"]);
           }
         }
       }
@@ -804,5 +819,10 @@ namespace MiniFireStore
 
     return db->allocRequest(parent + ":runQuery", jq, pre_cb, "query");
   }
+
+  const std::string& Result::getDocKeyName() {
+    return Ctes::json_doc_id_key;
+  }
+
 
 }

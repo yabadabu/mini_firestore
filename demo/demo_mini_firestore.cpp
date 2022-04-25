@@ -1,6 +1,6 @@
 #include <cassert>
 #include <cstdio>
-#include "mini_firestore/mini_firestore.h"
+#include "mini_firestore.h"
 #include "demo_credentials.h"
 
 using namespace MiniFireStore;
@@ -462,24 +462,11 @@ int main(int argc, char** argv)
   };
 
 
-  db.connect(user_email, user_password, [&](Result& result) {
-    if (result.err) {
+  db.connectOrSignUp(user_email, user_password, [&](Result& result) {
+    if (result.err)
       printf("Connect failed: %s\n", result.j.dump().c_str());
-      if (result.err == ERR_AUTH_EMAIL_NOT_FOUND) {
-
-        printf("Creating user...\n");
-        db.signUp(user_email, user_password, [&](Result& result) {
-          if (result.err)
-            printf("signUp failed also: %s\n", result.j.dump().c_str());
-          else {
-            runTests();
-          }
-          });
-      }
-    }
-    else {
+    else
       runTests();
-    }
     });
 
   while (!db.hasFinished()) {

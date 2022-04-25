@@ -10,7 +10,7 @@ VPATH+=demo
 SRCS=demo_mini_firestore.cpp mini_firestore.cpp
 OBJS=$(foreach f,${SRCS},objs/$(basename $f).o)
 
-objs/%.o : %.cpp include/mini_firestore/mini_firestore.h Makefile demo/demo_credentials.h
+objs/%.o : %.cpp src/mini_firestore.h Makefile demo/demo_credentials.h
 	@echo Compiling $@
 	@$(CC) $(CXXFLAGS) $< -o $@
 
