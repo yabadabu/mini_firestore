@@ -7,16 +7,21 @@ LIBS+=-lcurl -lstdc++
 VPATH=src
 VPATH+=demo
 
+OBJS_PATH=objs
 SRCS=demo_mini_firestore.cpp mini_firestore.cpp
-OBJS=$(foreach f,${SRCS},objs/$(basename $f).o)
+OBJS=$(foreach f,${SRCS},$(OBJS_PATH)/$(basename $f).o)
 
-objs/%.o : %.cpp src/mini_firestore.h Makefile demo/demo_credentials.h
+$(OBJS_PATH)/%.o : %.cpp src/mini_firestore.h Makefile demo/demo_credentials.h | $(OBJS_PATH)
 	@echo Compiling $@
-	@mkdir -p objs && $(CC) $(CXXFLAGS) $< -o $@
+	@$(CC) $(CXXFLAGS) $< -o $@
 
 app : ${OBJS}
 	@echo Linking $@
 	@$(CC) $+ $(LIBS) -o $@
+
+$(OBJS_PATH) :
+	@echo Creating temporal folder
+	@mkdir $(OBJS_PATH)
 
 clean :
 	rm -f objs/*
