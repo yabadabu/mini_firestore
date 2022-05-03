@@ -61,6 +61,8 @@ namespace MiniFireStore
   // -----------------------------------------
   static LogCallback current_callback;
   static eLevel      current_level = eLevel::Error;
+  static bool        check_certificates = false;
+  static bool        full_curl_traces = false;
 
   void setLogCallback(LogCallback new_callback) {
     current_callback = new_callback;
@@ -343,6 +345,8 @@ namespace MiniFireStore
     CURL* curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_URL, r->url.c_str());
 
+    if (full_curl_traces)
+        r->flags |= RPC_FLAG_TRACE;
     if (r->flags & RPC_FLAG_DELETE) {
       if (r->flags & RPC_FLAG_TRACE)
         log(eLevel::Log, "Custom request delete");
@@ -353,9 +357,8 @@ namespace MiniFireStore
     // ...
 
     // This is failing in windows
-#ifdef _WIN32
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
-#endif
+    if (!check_certificates)
+      curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
 
     if (r->flags & RPC_FLAG_TRACE) {
       log(eLevel::Log, "URL:%s", r->url.c_str());
