@@ -529,10 +529,13 @@ namespace MiniFireStore
 
     }
     else if (j.contains("arrayValue")) {
-      const json& values = j["arrayValue"]["values"];
       outValue = json::value_t::array;
-      for (const json& el : values)
-        outValue.push_back(fromValue(el));
+      const json& jarrayValue = j["arrayValue"];
+      if (jarrayValue.contains("values")) {
+        const json& values = jarrayValue["values"];
+        for (const json& el : values)
+          outValue.push_back(fromValue(el));
+      }
 
     }
     else if (j.contains("doubleValue")) {
