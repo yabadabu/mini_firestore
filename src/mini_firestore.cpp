@@ -549,6 +549,16 @@ namespace MiniFireStore
     return outValue;
   }
 
+  static bool isCollection(const std::string& url) {
+    size_t n = 0;
+    const char* p = url.data();
+    while( *p ) {
+      if (*p++ == '/')
+        ++n;
+    };
+    return (n & 1) == 0;
+  }
+
   static std::string idFromPath(const std::string& path) {
     std::string::size_type pos = path.rfind('/');
     if (pos != std::string::npos)
@@ -682,6 +692,57 @@ namespace MiniFireStore
   }
 
   uint32_t Ref::del(Callback cb) const {
+
+    if (isCollection(doc_id)) {
+      log(eLevel::Trace, "Deleting collection at %s. Requires scanning subdocs", doc_id.c_str());
+
+      // This might not work if the number of docs in the collection is superlarge
+      Ref rbase = *this;
+      uint32_t id = listAll([=](Result& res) {
+        const json& jdocs = res.j["documents"];
+        if (jdocs.is_null() || jdocs.empty()) {
+          log(eLevel::Trace, "  No subdocs in the collection");
+          Result result;
+          cb(result);
+        }
+        else {
+
+          // Starts with 1, to avoid potentially inc/dec on each iteration, 
+          // so we will need a final dec()
+          int* value = new int(1);
+
+          // Fn to check if the counter reaches zero, and then delete the pointer and call the callback
+          auto dec = [cb, value] {  
+            *value = *value - 1;
+            if (*value == 0) {
+              log(eLevel::Trace, "  Last subdoc removed. Triggering the callback");
+              delete value;
+              Result result;
+              cb(result);
+            }
+          };
+          auto inc = [value]() {
+            *value = *value + 1;
+          };
+
+          // Alloc a pointer to store the remaining callbacks to complete this request
+          log(eLevel::Trace, "  %d subdocs in the collection", (int)jdocs.size());
+          for (const auto& j : jdocs) {
+            if (j.contains("name")) {
+              std::string uri = j["name"];
+              std::string sub_doc_id = idFromPath(uri);
+              inc();
+              rbase.child(sub_doc_id).del([dec](Result& rdel) {
+                dec();
+                });
+            }
+          }
+
+          dec();
+        }
+      });
+      return id;
+    }
     return db->allocRequest(doc_id, nullptr, cb, "del", RPC_FLAG_DELETE);
   }
 
@@ -742,8 +803,63 @@ namespace MiniFireStore
     return db->allocRequest(":commit", jCmd, pre_cb, "inc");
   }
 
-  uint32_t Ref::list(Callback cb) const {
-    return db->allocRequest(doc_id, nullptr, cb, "list", RPC_FLAG_GET);
+  uint32_t Ref::list(Callback cb, int page_size, const char* next_token) const {
+    std::string url = doc_id;
+    if (page_size != 0)
+      url += "?pageSize=" + std::to_string(page_size);
+    if (next_token)
+      url += "?pageToken=" + std::string(next_token);
+    return db->allocRequest(url, nullptr, cb, "list", RPC_FLAG_GET);
+  }
+
+  uint32_t Ref::listAll(Callback cb) const {
+
+    // The full operation requires a struct to hold the progress
+    // So, allocate a struct and pass it by value between callbacks
+    struct State {
+      Ref         ref;
+      Callback    cb;
+      std::string next_token;
+      Result      result;
+      std::function<void(State* s)> listBatch;
+    };
+    State* s = new State{ *this, cb };
+    log(eLevel::Trace, "[%p] Alloc", s);
+
+    s->listBatch = [=](State* s) {
+      s->ref.list([=](Result& result) {
+
+        const json& jdocs = result.j["documents"];
+        if (s->next_token.empty()) {
+          log(eLevel::Trace, "[%p] Saving initial result of %d docs", s, (int)jdocs.size());
+          s->result = result;
+        }
+        else {
+          log(eLevel::Trace, "[%p] Adding %d result to existing result", s, (int)jdocs.size());
+          json& final_docs = s->result.j["documents"];
+          for (auto& j : jdocs) 
+            final_docs.push_back(j);
+        }
+
+        // Check if there are more results in the db
+        if (result.j.contains("nextPageToken")) {
+          log(eLevel::Trace, "[%p] There are more pages!", s);
+          s->next_token = result.j["nextPageToken"];
+          s->listBatch(s);
+        }
+        else {
+          log(eLevel::Trace, "[%p] We have all the results. Calling the original callback", s);
+          s->cb(s->result);
+          delete s;
+        }
+
+        // Let the system choose the pageSize
+        }, 0, s->next_token.c_str());
+    };
+
+    s->listBatch(s);
+
+    return 0;
   }
 
   uint32_t Ref::patch(const std::string& field_name, const json& new_value, Callback cb) const {

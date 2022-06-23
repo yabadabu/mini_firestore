@@ -59,7 +59,8 @@ namespace MiniFireStore
     uint32_t add(const json& j, Callback cb) const;
     uint32_t query(const Query& q, Callback cb) const;
     uint32_t inc(const std::string& field_name, double value, Callback cb) const;
-    uint32_t list(Callback cb) const;
+    uint32_t list(Callback cb, int page_size = 0, const char* next_token = nullptr) const;
+    uint32_t listAll(Callback cb) const;
     uint32_t patch(const std::string& field_name, const json& new_value, Callback cb) const;
 
     Ref() = default;

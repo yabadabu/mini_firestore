@@ -263,6 +263,8 @@ void testQuery(MiniFireStore::Firestore& db) {
       printf("  [%s] Age:%d Name:%s  [ID:%s]\n", title, rp.age, rp.name.c_str(), id.c_str());
     }
     if (expected_result >= 0) {
+      printf("  [%s] Error. Results expected to be %d, but it's %d\n", title, (int)expected_result, (int)result.j.size());
+      printf("Result: %s", result.j.dump(2).c_str());
       assert(result.j.size() == expected_result);
     }
   };
@@ -375,7 +377,6 @@ void testTime(MiniFireStore::Firestore& db) {
     assert(false);
   }
 
-
   Ref ref = db.ref("users").child(db.uid()).child("tests/time_conversions");
   ref.read([=](Result& r) {
     printf("time read result.j=%s\n", r.j.dump().c_str());
@@ -431,10 +432,108 @@ void testPatch(Firestore& db) {
   while (!db.hasFinished()) db.update();
 }
 
+void deleteSubCollection(Ref r) {
+  printf("Deleting subcollection: %s\n", r.id().c_str());
+
+  printf("List contents\n");
+  r.list([=](Result& res) {
+    printf("  Res: %s\n", res.j.dump().c_str());
+    
+    printf("Deleting collection starts\n");
+    r.del([=](Result& res) {
+      printf("Deleted completes. Listing contents again\n");
+      r.list([=](Result& res) {
+        printf("  Res: %s\n", res.j.dump().c_str());
+        assert(res.j.empty());
+        });
+      });
+    });
+}
+
+void testDeleteTasks(Firestore& db) {
+  Ref r = db.ref("users").child(db.uid());
+  deleteSubCollection(r.child("unlocks"));
+  while (!db.hasFinished()) db.update();
+}
+
+void testDeleteSubCollection(Firestore& db) {
+  Ref r = db.ref("free").child(db.uid());
+  Ref rc = r.child("children");
+  bool add_children = true;
+  if (add_children) {
+    Person p(99, "James");
+    r.write(p, [=](const Result& result) {
+      Person p1(30, "John");
+      Person p2(31, "Peter");
+      rc.add(p1, [=](const Result& result) {
+        rc.add(p2, [=](const Result& result) {
+          printf("DOC and Subcollection created\n");
+          deleteSubCollection(rc);
+          r.del([=](const Result& result) {
+            printf("James is also removed\n");
+            });
+          });
+        });
+      });
+  }
+  else {
+    deleteSubCollection(rc);
+  }
+  while (!db.hasFinished()) db.update();
+}
+
+void testListLarge(Firestore& db) {
+  Ref r = db.ref("free").child(db.uid()).child("multi");
+  int nmax = 100;
+  int ncompletes = 0;
+  int total_docs_recv = 0;
+
+  // Delete previous contents, then start from zero
+  printf("First, delete previous contents\n");
+  r.del([&](Result& res) {
+    printf("Ok, starting from scratch\n");
+
+    // Populate a 'large' number of docs
+    for (int i = 0; i < nmax; ++i) {
+      if( i % 10 == 0 )
+        printf("Pushed %d/%d...\n", i, nmax);
+      Person p(i, "Sam");
+      r.add(p, [&](Result& res) {
+        ncompletes++;
+        if (ncompletes == nmax) {
+          printf("All %d items have been created\n", nmax);
+          // Now list the items
+          
+          int page_size = 4;
+          printf("Start with a simple query of just the first %d items\n", page_size);
+          // Get a max of 4 items
+          r.list([&, page_size](Result& res) {
+            const json& jdocs = res.j["documents"];
+            printf("Request a max of %d, and received %d/%d\n", page_size, (int)jdocs.size(), nmax);
+            assert(jdocs.size() == page_size);
+
+            printf("Now, let the api collect ALL the docs\n");
+            // Get a max of 4 items
+            r.listAll([&, page_size](Result& res) {
+              const json& jdocs = res.j["documents"];
+              printf("Final list ALl received %d/%d\n", (int)jdocs.size(), nmax);
+              assert(jdocs.size() == nmax);
+              });
+
+            }, page_size);
+
+        }
+        });
+    }
+    });
+
+  while (!db.hasFinished()) db.update();
+}
+
 class MySample {
 public:
   void myLog(MiniFireStore::eLevel level, const char* msg) {
-    printf("[%d] %s", level, msg);
+    printf("[%d] %s\n", level, msg);
   }
 };
 
@@ -458,9 +557,10 @@ int main(int argc, char** argv)
     testSubCollections(db);
     testDelete(db);
     testReadWriteDelete(db);
+    testDeleteSubCollection(db);
     testQuery(db);
+    testListLarge(db);
   };
-
 
   db.connectOrSignUp(user_email, user_password, [&](Result& result) {
     if (result.err)
